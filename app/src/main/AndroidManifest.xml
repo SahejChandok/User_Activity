@@ -2,7 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <application
+    <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+
+
+
+<application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -11,6 +19,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Csi_5175_sensor_application"
         tools:targetApi="31">
+        <service
+            android:name=".ActivityRecognitionService"
+            android:exported="false"></service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true">
