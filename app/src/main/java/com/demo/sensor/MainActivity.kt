@@ -1,5 +1,9 @@
 package com.demo.sensor
+<<<<<<< HEAD
 import android.graphics.drawable.Drawable
+=======
+import android.content.Context
+>>>>>>> 102666c (adds database support and toast)
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -10,18 +14,20 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 import android.media.MediaPlayer
-import android.os.SystemClock
-import android.widget.Toast
 import com.google.android.material.snackbar.Snackbar
-import androidx.core.app.NotificationCompat
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
+    private lateinit var appDatabase: AppDatabase
     private lateinit var sensorManager: SensorManager
     private var previousMagnitude: Float = 0.0F
     private lateinit var userActivityStart: Date
@@ -39,6 +45,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        appDatabase = AppDatabase.getDatabase(this)
         setContentView(R.layout.activity_main)
         mediaPlayer = MediaPlayer.create(applicationContext, R.raw.glory)
         mediaPlayer.isLooping = true
@@ -134,13 +141,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 if(userActivity != Constants.UNKNOWN) {
 //                  store the user activity in the database
                     Log.d("act", "updating the activity $userActivity")
-                    getDifferenceAndStoreActivityRecord(currentDateTime,
+                    getDifferenceAndStoreActivityRecord(this, currentDateTime,
                         userActivityStart, userActivity)
+                    updateUIforActivity(majorityActivity)
                 }
 //              reset the activity and start time for the majority activity
                 userActivity = majorityActivity
                 userActivityStart = currentDateTime
-                updateUIforActivity(majorityActivity)
+
 
             } else if (userActivity == Constants.UNKNOWN) {
                 userActivityStart = currentDateTime
@@ -154,7 +162,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
                textView1.text="Walking"
                imageView.setImageDrawable(walkingImg)
-               Snackbar.make(findViewById(android.R.id.content), "You're doing great!", Snackbar.LENGTH_SHORT).show()
+               Snackbar.make(findViewById(R.id.content), "You're doing great!", Snackbar.LENGTH_SHORT).show()
                //Toast.makeText(this, "You were still for $dur seconds", Toast.LENGTH_SHORT).show()
            } else if(majorityActivity== Constants.RUNNING){
                textView1.text="Running"
@@ -171,9 +179,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
            }
     }
 
-    private fun getDifferenceAndStoreActivityRecord(start: Date, end: Date, activity: String) {
+    private fun getDifferenceAndStoreActivityRecord(context: Context, start: Date, end: Date, activity: String) {
         val duration: Double = (end.time - start.time)/60.0
         Log.d("act", "$activity $end $duration")
+        val activityLog = UserActivityLog(duration = duration, dateTime = end.toString())
+        GlobalScope.launch(Dispatchers.IO) {
+            appDatabase.userActivityLogDao().insert(activityLog)
+        }
+        Toast.makeText(context,
+            "User was ${activity.lowercase()} for ${duration.toInt()} minutes",
+            Toast.LENGTH_SHORT).show()
     }
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
         return
