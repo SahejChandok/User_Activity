@@ -1,5 +1,6 @@
 package com.demo.sensor
 import android.graphics.drawable.Drawable
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -10,23 +11,28 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 import android.media.MediaPlayer
-import android.os.SystemClock
-import android.widget.Toast
+import android.opengl.Visibility
 import com.google.android.material.snackbar.Snackbar
-import androidx.core.app.NotificationCompat
+import org.w3c.dom.Text
+import java.time.Period
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
+    private lateinit var appDatabase: AppDatabase
     private lateinit var sensorManager: SensorManager
     private var previousMagnitude: Float = 0.0F
     private lateinit var userActivityStart: Date
     private var userActivity: String = Constants.UNKNOWN
-    private var userActivityList = ArrayList<String>(10)
+    private var userActivityList = ArrayList<String>(15)
    private lateinit var walkingImg: Drawable
     private lateinit var stillImg: Drawable
     private lateinit var runningImg: Drawable
@@ -35,36 +41,43 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
    private lateinit var textView1:TextView
     private lateinit var imageView:ImageView
     private lateinit var mediaPlayer: MediaPlayer
-    private var startt: Long=0
+    private lateinit var motivationalQuoteText: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        appDatabase = AppDatabase.getDatabase(this)
         setContentView(R.layout.activity_main)
         mediaPlayer = MediaPlayer.create(applicationContext, R.raw.glory)
         mediaPlayer.isLooping = true
-        mediaPlayer.start()
+        motivationalQuoteText = findViewById(R.id.motivation_quote)
+        motivationalQuoteText.text = "Opportunities don't happen, you create them."
+        motivationalQuoteText.visibility = TextView.INVISIBLE
         val textView: TextView = findViewById(R.id.date1)
-        val simpleDateFormat = SimpleDateFormat("yyyy.MM.dd G 'at' HH:mm:ss z")
+        val simpleDateFormat = SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z")
         val currentDateAndTime: String = simpleDateFormat.format(Date())
         textView.text = currentDateAndTime
          textView1= findViewById(R.id.textView2)
         imageView = findViewById(R.id.imageView2)
-
-
-
         walkingImg=resources.getDrawable(R.drawable.walking, null)
         stillImg=resources.getDrawable(R.drawable.still, null)
         runningImg=resources.getDrawable(R.drawable.running, null)
         vehicleImg=resources.getDrawable(R.drawable.vehicle, null)
         unknownImg=resources.getDrawable(R.drawable.unknown, null)
-
-
     }
     override fun onStart() {
         super.onStart()
+        resetData()
+        textView1.text="Unknown"
+        imageView.setImageDrawable(unknownImg)
+        motivationalQuoteText.visibility = TextView.INVISIBLE
         setupSensor()
     }
 
+    private fun resetData() {
+        userActivity = Constants.UNKNOWN
+        userActivityStart = Date()
+        userActivityList.clear()
+    }
 
     private fun setupSensor() {
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -76,9 +89,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     override fun onStop() {
         super.onStop()
-
         sensorManager.unregisterListener(this)
-        mediaPlayer.stop()
+        stopMediaPlayer()
+    }
+    private fun stopMediaPlayer() {
+        if(mediaPlayer.isPlaying) {
+            mediaPlayer.stop()
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
@@ -109,22 +126,17 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val delta: Float = abs( magnitude - previousMagnitude)
 
             previousMagnitude = magnitude
-            Log.d("delta", "$delta")
-            if(delta < 0.6) {
-                Log.d("act", "still")
+            if(delta < 0.13) {
                 currentActivity = Constants.STILL
-            } else if(delta >= 0.6 && delta < 4 ) {
-                Log.d("act", "walk")
+            } else if(delta >= 0.13 && delta < 1.5 ) {
                 currentActivity = Constants.WALKING
-            } else if(delta >=4 && delta < 15) {
-               Log.d("act", "run")
+            } else if(delta >=1.5 && delta < 3) {
                 currentActivity = Constants.RUNNING
-            } else if (delta >=15 && delta < 25) {
+            } else if (delta >=3 && delta < 9) {
                 currentActivity = Constants.IN_VEHICLE
-
             }
             userActivityList.add(currentActivity)
-            if(userActivityList.size > 10) {
+            if(userActivityList.size > 15) {
                 userActivityList.removeAt(0)
             }
 //          predict the activity using majority classifier
@@ -134,13 +146,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 if(userActivity != Constants.UNKNOWN) {
 //                  store the user activity in the database
                     Log.d("act", "updating the activity $userActivity")
-                    getDifferenceAndStoreActivityRecord(currentDateTime,
-                        userActivityStart, userActivity)
+                    getDifferenceAndStoreActivityRecord(this, userActivityStart,
+                        currentDateTime, userActivity)
+                    updateUIforActivity(majorityActivity)
                 }
 //              reset the activity and start time for the majority activity
                 userActivity = majorityActivity
                 userActivityStart = currentDateTime
-                updateUIforActivity(majorityActivity)
+
 
             } else if (userActivity == Constants.UNKNOWN) {
                 userActivityStart = currentDateTime
@@ -148,32 +161,61 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         }
     }
     private fun updateUIforActivity(majorityActivity: String) {
-       /* val currentt= SystemClock.elapsedRealtime()
-        val dur=(currentt-startt)/1000;*/
            if(majorityActivity== Constants.WALKING){
-
+               stopMediaPlayer()
+               motivationalQuoteText.visibility = TextView.VISIBLE
                textView1.text="Walking"
                imageView.setImageDrawable(walkingImg)
-               Snackbar.make(findViewById(android.R.id.content), "You're doing great!", Snackbar.LENGTH_SHORT).show()
+
                //Toast.makeText(this, "You were still for $dur seconds", Toast.LENGTH_SHORT).show()
            } else if(majorityActivity== Constants.RUNNING){
+               mediaPlayer.start()
+               motivationalQuoteText.visibility = TextView.INVISIBLE
                textView1.text="Running"
                imageView.setImageDrawable(runningImg)
            } else if(majorityActivity == Constants.STILL){
+               stopMediaPlayer()
+               motivationalQuoteText.visibility = TextView.INVISIBLE
                textView1.text="Still"
                imageView.setImageDrawable(stillImg)
            }else if(majorityActivity == Constants.IN_VEHICLE){
+               stopMediaPlayer()
+               motivationalQuoteText.visibility = TextView.INVISIBLE
                textView1.text="In Vehicle"
                imageView.setImageDrawable(vehicleImg)
            }else{
+               stopMediaPlayer()
+               motivationalQuoteText.visibility = TextView.INVISIBLE
                textView1.text="Unknown"
                imageView.setImageDrawable(unknownImg)
            }
     }
 
-    private fun getDifferenceAndStoreActivityRecord(start: Date, end: Date, activity: String) {
-        val duration: Double = (end.time - start.time)/60.0
-        Log.d("act", "$activity $end $duration")
+    private fun getDifferenceAndStoreActivityRecord(context: Context, start: Date, end: Date, activity: String) {
+        var duration: Double = (end.time - start.time)/(60.0 * 1000)
+        Log.d("act", "logging $activity $start $end $duration")
+        val durationToBeSaved = if (duration < 1) 0.0 else duration
+        Log.d("act", "duration to be saved $durationToBeSaved")
+        val activityLog = UserActivityLog(null, durationToBeSaved, start.toString())
+        var toastMessage = "You were ${activity.lowercase()} for "
+        val durationInMinutes = duration.toInt()
+        val durationInSeconds = ((duration - durationInMinutes) * 60).toInt()
+        if(durationInMinutes == 0 && durationInSeconds > 0) {
+            toastMessage += "$durationInSeconds seconds"
+        } else if(durationInMinutes > 0 && durationInSeconds == 0){
+            toastMessage += "$durationInMinutes minutes"
+        } else if(durationInMinutes > 0 && durationInSeconds > 0) {
+            toastMessage += "$durationInMinutes minutes, $durationInSeconds seconds"
+        } else {
+            toastMessage = ""
+        }
+        Log.d("act", "toast: $toastMessage")
+        if(toastMessage != "") {
+            GlobalScope.launch(Dispatchers.IO) {
+                appDatabase.userActivityLogDao().insert(activityLog)
+            }
+            Snackbar.make(findViewById(R.id.content), toastMessage, Snackbar.LENGTH_SHORT).show()
+        }
     }
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
         return
