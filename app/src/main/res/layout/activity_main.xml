@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
+    android:textAlignment="center"
     tools:context=".MainActivity">
 
     <TextView
@@ -46,5 +47,15 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="28dp"
         android:text="Activity Detected" />
+
+    <TextView
+        android:id="@+id/motivation_quote"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/textView2"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:text="Motivational Quote"
+        android:textAlignment="center" />
 
 </RelativeLayout>
