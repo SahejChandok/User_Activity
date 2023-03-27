@@ -7,5 +7,5 @@ import androidx.room.PrimaryKey
 data class UserActivityLog (
     @PrimaryKey(autoGenerate = true) val id: Int?,
     val duration: Double?,
-    val dateTime: String?
+    val dateTime: String? // stores the start date and time.
 )

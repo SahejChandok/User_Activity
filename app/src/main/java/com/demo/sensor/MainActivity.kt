@@ -1,31 +1,27 @@
 package com.demo.sensor
-import android.graphics.drawable.Drawable
+
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.widget.TextView
-import java.text.SimpleDateFormat
-import androidx.appcompat.app.AppCompatActivity
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
-import android.widget.Toast
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
+import kotlin.concurrent.timer
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
-import android.media.MediaPlayer
-import android.opengl.Visibility
-import com.google.android.material.snackbar.Snackbar
-import org.w3c.dom.Text
-import java.time.Period
-import kotlin.concurrent.timer
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var appDatabase: AppDatabase
@@ -34,13 +30,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var userActivityStart: Date
     private var userActivity: String = Constants.UNKNOWN
     private var userActivityList = ArrayList<String>(15)
-   private lateinit var walkingImg: Drawable
+    private lateinit var walkingImg: Drawable
     private lateinit var stillImg: Drawable
     private lateinit var runningImg: Drawable
     private lateinit var vehicleImg: Drawable
-    private lateinit var unknownImg:Drawable
-   private lateinit var textView1:TextView
-    private lateinit var imageView:ImageView
+    private lateinit var unknownImg: Drawable
+    private lateinit var textView1: TextView
+    private lateinit var imageView: ImageView
     private lateinit var mediaPlayer: MediaPlayer
     private lateinit var motivationalQuoteText: TextView
     private lateinit var timer: Timer
@@ -60,22 +56,27 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         textView.text = currentDateAndTime
         timer = timer(period = 1000) {
             runOnUiThread {
-                val currentTime = SimpleDateFormat("yyyy.MM.dd 'at' hh:mm:ss a", Locale.getDefault()).format(Date())
+                val currentTime = SimpleDateFormat(
+                    "yyyy.MM.dd 'at' hh:mm:ss a",
+                    Locale.getDefault()
+                ).format(Date())
                 textView.text = currentTime
             }
         }
-         textView1= findViewById(R.id.textView2)
+        textView1 = findViewById(R.id.textView2)
         imageView = findViewById(R.id.imageView2)
-        walkingImg=resources.getDrawable(R.drawable.walking, null)
-        stillImg=resources.getDrawable(R.drawable.still, null)
-        runningImg=resources.getDrawable(R.drawable.running, null)
-        vehicleImg=resources.getDrawable(R.drawable.vehicle, null)
-        unknownImg=resources.getDrawable(R.drawable.unknown, null)
+        walkingImg = resources.getDrawable(R.drawable.walking, null)
+        stillImg = resources.getDrawable(R.drawable.still, null)
+        runningImg = resources.getDrawable(R.drawable.running, null)
+        vehicleImg = resources.getDrawable(R.drawable.vehicle, null)
+        unknownImg = resources.getDrawable(R.drawable.unknown, null)
+
     }
+
     override fun onStart() {
         super.onStart()
         resetData()
-        textView1.text="Unknown"
+        textView1.text = "Unknown"
         imageView.setImageDrawable(unknownImg)
         motivationalQuoteText.visibility = TextView.INVISIBLE
         setupSensor()
@@ -89,10 +90,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
 
     private fun setupSensor() {
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        val  accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        sensorManager.registerListener(this,
+        val accelerometerSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        sensorManager.registerListener(
+            this,
             accelerometerSensor,
-            SensorManager.SENSOR_DELAY_NORMAL)
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
     }
 
     override fun onStop() {
@@ -100,22 +103,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         sensorManager.unregisterListener(this)
         stopMediaPlayer()
     }
+
     private fun stopMediaPlayer() {
-        if(mediaPlayer.isPlaying) {
+        if (mediaPlayer.isPlaying) {
             mediaPlayer.stop()
         }
     }
 
+    /***
+     * method to handle sensor change value
+     */
     override fun onSensorChanged(event: SensorEvent?) {
         val currentDateTime = Date()
-        if(event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
+        if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
             // In this example, alpha is calculated as t / (t + dT),
             // where t is the low-pass filter's time-constant and
             // dT is the event delivery rate.
             var currentActivity = Constants.UNKNOWN
             val alpha = 0.8f
-            val gravity = floatArrayOf(SensorManager.GRAVITY_EARTH,
-                SensorManager.GRAVITY_EARTH, SensorManager.GRAVITY_EARTH)
+            val gravity = floatArrayOf(
+                SensorManager.GRAVITY_EARTH,
+                SensorManager.GRAVITY_EARTH, SensorManager.GRAVITY_EARTH
+            )
             val linearAcceleration = FloatArray(3)
 
             // Isolate the force of gravity with the low-pass filter.
@@ -131,31 +140,32 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 linearAcceleration[0].pow(2)
                         + linearAcceleration[1].pow(2)
             )
-            val delta: Float = abs( magnitude - previousMagnitude)
+            val delta: Float = abs(magnitude - previousMagnitude)
 
             previousMagnitude = magnitude
-            if(delta < 0.20) {
+            if (delta < 0.20) {
                 currentActivity = Constants.STILL
-            } else if(delta >= 0.20 && delta < 1.5 ) {
+            } else if (delta >= 0.20 && delta < 1.5) {
                 currentActivity = Constants.WALKING
-            } else if(delta >=1.5 && delta < 4) {
+            } else if (delta >= 1.5 && delta < 4) {
                 currentActivity = Constants.RUNNING
-            } else if (delta >=4 && delta < 8) {
+            } else if (delta >= 4 && delta < 8) {
                 currentActivity = Constants.IN_VEHICLE
             }
             userActivityList.add(currentActivity)
-            if(userActivityList.size > 15) {
+            if (userActivityList.size > 15) {
                 userActivityList.removeAt(0)
             }
 //          predict the activity using majority classifier
             val majorityActivity = userActivityList.groupingBy { it }
                 .eachCount().maxBy { it.value }.key
-            if(majorityActivity != userActivity) {
-                if(userActivity != Constants.UNKNOWN) {
+            if (majorityActivity != userActivity) {
+                if (userActivity != Constants.UNKNOWN) {
 //                  store the user activity in the database
-                    Log.d("act", "updating the activity $userActivity")
-                    getDifferenceAndStoreActivityRecord(this, userActivityStart,
-                        currentDateTime, userActivity)
+                    getDifferenceAndStoreActivityRecord(
+                        this, userActivityStart,
+                        currentDateTime, userActivity
+                    )
                     updateUIforActivity(majorityActivity)
                 }
 //              reset the activity and start time for the majority activity
@@ -168,57 +178,66 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
         }
     }
-    private fun updateUIforActivity(majorityActivity: String) {
-           if(majorityActivity== Constants.WALKING){
-               stopMediaPlayer()
-               motivationalQuoteText.visibility = TextView.VISIBLE
-               textView1.text="Walking"
-               imageView.setImageDrawable(walkingImg)
 
-               //Toast.makeText(this, "You were still for $dur seconds", Toast.LENGTH_SHORT).show()
-           } else if(majorityActivity== Constants.RUNNING){
-               mediaPlayer.start()
-               motivationalQuoteText.visibility = TextView.INVISIBLE
-               textView1.text="Running"
-               imageView.setImageDrawable(runningImg)
-           } else if(majorityActivity == Constants.STILL){
-               stopMediaPlayer()
-               motivationalQuoteText.visibility = TextView.INVISIBLE
-               textView1.text="Still"
-               imageView.setImageDrawable(stillImg)
-           }else if(majorityActivity == Constants.IN_VEHICLE){
-               stopMediaPlayer()
-               motivationalQuoteText.visibility = TextView.INVISIBLE
-               textView1.text="In Vehicle"
-               imageView.setImageDrawable(vehicleImg)
-           }else{
-               stopMediaPlayer()
-               motivationalQuoteText.visibility = TextView.INVISIBLE
-               textView1.text="Unknown"
-               imageView.setImageDrawable(unknownImg)
-           }
+    /***
+     * This method updates the UI image and activity name, starts media player
+     * and adds motivational quote.
+     */
+    private fun updateUIforActivity(majorityActivity: String) {
+        if (majorityActivity == Constants.WALKING) {
+            stopMediaPlayer()
+            motivationalQuoteText.visibility = TextView.VISIBLE
+            textView1.text = "Walking"
+            imageView.setImageDrawable(walkingImg)
+
+        } else if (majorityActivity == Constants.RUNNING) {
+            mediaPlayer.start()
+            motivationalQuoteText.visibility = TextView.INVISIBLE
+            textView1.text = "Running"
+            imageView.setImageDrawable(runningImg)
+        } else if (majorityActivity == Constants.STILL) {
+            stopMediaPlayer()
+            motivationalQuoteText.visibility = TextView.INVISIBLE
+            textView1.text = "Still"
+            imageView.setImageDrawable(stillImg)
+        } else if (majorityActivity == Constants.IN_VEHICLE) {
+            stopMediaPlayer()
+            motivationalQuoteText.visibility = TextView.INVISIBLE
+            textView1.text = "In Vehicle"
+            imageView.setImageDrawable(vehicleImg)
+        } else {
+            stopMediaPlayer()
+            motivationalQuoteText.visibility = TextView.INVISIBLE
+            textView1.text = "Unknown"
+            imageView.setImageDrawable(unknownImg)
+        }
     }
 
-    private fun getDifferenceAndStoreActivityRecord(context: Context, start: Date, end: Date, activity: String) {
-        var duration: Double = (end.time - start.time)/(60.0 * 1000)
-        Log.d("act", "logging $activity $start $end $duration")
+
+    private fun getDifferenceAndStoreActivityRecord(
+        context: Context,
+        start: Date,
+        end: Date,
+        activity: String
+    ) {
+        var duration: Double = (end.time - start.time) / (60.0 * 1000)
+        // if the value is less than 1 minute, save zero in the database
         val durationToBeSaved = if (duration < 1) 0.0 else duration
-        Log.d("act", "duration to be saved $durationToBeSaved")
         val activityLog = UserActivityLog(null, durationToBeSaved, start.toString())
         var toastMessage = "You were ${activity.lowercase()} for "
         val durationInMinutes = duration.toInt()
         val durationInSeconds = ((duration - durationInMinutes) * 60).toInt()
-        if(durationInMinutes == 0 && durationInSeconds > 0) {
+        if (durationInMinutes == 0 && durationInSeconds > 0) {
             toastMessage += "$durationInSeconds seconds"
-        } else if(durationInMinutes > 0 && durationInSeconds == 0){
+        } else if (durationInMinutes > 0 && durationInSeconds == 0) {
             toastMessage += "$durationInMinutes minutes"
-        } else if(durationInMinutes > 0 && durationInSeconds > 0) {
+        } else if (durationInMinutes > 0 && durationInSeconds > 0) {
             toastMessage += "$durationInMinutes minutes, $durationInSeconds seconds"
         } else {
             toastMessage = ""
         }
-        Log.d("act", "toast: $toastMessage")
-        if(toastMessage != "") {
+        // save activity log and display snackbar
+        if (toastMessage != "") {
             GlobalScope.launch(Dispatchers.IO) {
                 appDatabase.userActivityLogDao().insert(activityLog)
             }
@@ -230,11 +249,10 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         super.onDestroy()
         timer.cancel()
     }
+
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
         return
     }
-
-
 
 
 }
