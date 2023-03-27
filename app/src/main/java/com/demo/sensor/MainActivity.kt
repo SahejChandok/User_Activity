@@ -25,6 +25,7 @@ import android.opengl.Visibility
 import com.google.android.material.snackbar.Snackbar
 import org.w3c.dom.Text
 import java.time.Period
+import kotlin.concurrent.timer
 
 class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var appDatabase: AppDatabase
@@ -42,6 +43,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
     private lateinit var imageView:ImageView
     private lateinit var mediaPlayer: MediaPlayer
     private lateinit var motivationalQuoteText: TextView
+    private lateinit var timer: Timer
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,6 +58,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         val simpleDateFormat = SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z")
         val currentDateAndTime: String = simpleDateFormat.format(Date())
         textView.text = currentDateAndTime
+        timer = timer(period = 1000) {
+            runOnUiThread {
+                val currentTime = SimpleDateFormat("yyyy.MM.dd 'at' hh:mm:ss a", Locale.getDefault()).format(Date())
+                textView.text = currentTime
+            }
+        }
          textView1= findViewById(R.id.textView2)
         imageView = findViewById(R.id.imageView2)
         walkingImg=resources.getDrawable(R.drawable.walking, null)
@@ -126,13 +134,13 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val delta: Float = abs( magnitude - previousMagnitude)
 
             previousMagnitude = magnitude
-            if(delta < 0.13) {
+            if(delta < 0.30) {
                 currentActivity = Constants.STILL
-            } else if(delta >= 0.13 && delta < 1.5 ) {
+            } else if(delta >= 0.30 && delta < 1.5 ) {
                 currentActivity = Constants.WALKING
-            } else if(delta >=1.5 && delta < 3) {
+            } else if(delta >=1.5 && delta < 4) {
                 currentActivity = Constants.RUNNING
-            } else if (delta >=3 && delta < 9) {
+            } else if (delta >=4 && delta < 8) {
                 currentActivity = Constants.IN_VEHICLE
             }
             userActivityList.add(currentActivity)
@@ -216,6 +224,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             }
             Snackbar.make(findViewById(R.id.content), toastMessage, Snackbar.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        timer.cancel()
     }
     override fun onAccuracyChanged(p0: Sensor?, p1: Int) {
         return
