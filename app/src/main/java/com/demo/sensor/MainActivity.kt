@@ -134,9 +134,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             val delta: Float = abs( magnitude - previousMagnitude)
 
             previousMagnitude = magnitude
-            if(delta < 0.30) {
+            if(delta < 0.20) {
                 currentActivity = Constants.STILL
-            } else if(delta >= 0.30 && delta < 1.5 ) {
+            } else if(delta >= 0.20 && delta < 1.5 ) {
                 currentActivity = Constants.WALKING
             } else if(delta >=1.5 && delta < 4) {
                 currentActivity = Constants.RUNNING
