@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
         setContentView(R.layout.activity_main)
         mediaPlayer = MediaPlayer.create(applicationContext, R.raw.glory)
         mediaPlayer.isLooping = true
+        mediaPlayer.start()
         motivationalQuoteText = findViewById(R.id.motivation_quote)
         motivationalQuoteText.text = "Opportunities don't happen, you create them."
         motivationalQuoteText.visibility = TextView.INVISIBLE
@@ -63,6 +64,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
                 textView.text = currentTime
             }
         }
+
         textView1 = findViewById(R.id.textView2)
         imageView = findViewById(R.id.imageView2)
         walkingImg = resources.getDrawable(R.drawable.walking, null)
@@ -185,7 +187,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
      */
     private fun updateUIforActivity(majorityActivity: String) {
         if (majorityActivity == Constants.WALKING) {
-            stopMediaPlayer()
             motivationalQuoteText.visibility = TextView.VISIBLE
             textView1.text = "Walking"
             imageView.setImageDrawable(walkingImg)
@@ -196,17 +197,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener {
             textView1.text = "Running"
             imageView.setImageDrawable(runningImg)
         } else if (majorityActivity == Constants.STILL) {
-            stopMediaPlayer()
             motivationalQuoteText.visibility = TextView.INVISIBLE
             textView1.text = "Still"
             imageView.setImageDrawable(stillImg)
         } else if (majorityActivity == Constants.IN_VEHICLE) {
-            stopMediaPlayer()
             motivationalQuoteText.visibility = TextView.INVISIBLE
             textView1.text = "In Vehicle"
             imageView.setImageDrawable(vehicleImg)
         } else {
-            stopMediaPlayer()
             motivationalQuoteText.visibility = TextView.INVISIBLE
             textView1.text = "Unknown"
             imageView.setImageDrawable(unknownImg)
